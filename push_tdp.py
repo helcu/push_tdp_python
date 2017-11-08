@@ -504,7 +504,7 @@ class UDRequestUser(Resource):
         except Exception as e:
             return {'error': str(e)}
 
-    def get(self, request_user_id):
+    def get(self, course_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
@@ -513,22 +513,23 @@ class UDRequestUser(Resource):
             conn = mysql.connect()
             cursor = conn.cursor()
 
-            cursor.callproc('spSelectCourseUser', [request_user_id])
+            cursor.callproc('spObtainUsersPerCourse', [course_id])
             data = cursor.fetchall()
 
             if len(data) > 0:
-                json_object = {}
-                for my_user in data:
-                    json_object = collections.OrderedDict()
-                    json_object['id'] = my_user[0]
-                    json_object['request_id'] = my_user[1]
-                    json_object['user_id'] = my_user[2]
-                    json_object['state'] = my_user[3]
+                json_array = []
+                for my_course in data:
+                    aux = collections.OrderedDict()
+                    aux['id'] = my_course[0]
+                    aux['name'] = my_course[1]
+                    aux['surname'] = my_course[2]
+                    aux['username'] = my_course[3]
+                    json_array.append(aux)
                 conn.commit()
                 conn.close()
-                return {'StatusCode': '200', 'Message': json_object}
+                return {'StatusCode': '200', 'Message': json_array}
             else:
-                return {'StatusCode': '1000', 'Message': 'Request_User not found.'}
+                return {'StatusCode': '1000', 'Message': 'Curso no encontrado.'}
         except Exception as e:
             return {'error': str(e)}
 
@@ -540,7 +541,7 @@ api.add_resource(UDUser, '/users/<user_id>')
 api.add_resource(CSCourse, '/courses', '/courses/')
 api.add_resource(UDCourse, '/courses/<course_id>')
 api.add_resource(CSCourseUser, '/requests_users', '/requests_users/')
-api.add_resource(UDRequestUser, '/requests_users/<request_user_id>')
+api.add_resource(UDRequestUser, '/requests_users/<course_id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
