@@ -10,7 +10,7 @@ import os
 import binascii
 
 app = Flask(__name__)
-PORT = 5000
+#PORT = 5000
 api = Api(app)
 mysql = MySQL()
 
@@ -244,6 +244,7 @@ class CSCourse(Resource):
             cursor = conn.cursor()
 
             parser = reqparse.RequestParser()
+            parser.add_argument('user_id', type=int)
             parser.add_argument('name', type=str)
             parser.add_argument('vacancies', type=int)
             parser.add_argument('url', type=str)
@@ -254,9 +255,23 @@ class CSCourse(Resource):
             data = cursor.fetchall()
 
             if len(data) is 0:
+                # 'Cause i want only the token_id who create de course.
+                cursor.execute("SELECT c.id FROM course c where c.name='" + args['name'] + "'")
+                course_id = cursor.fetchone()
+                cursor.callproc('spObtainTokenId', [None, args['user_id']])
+                token_list = cursor.fetchall()
+                data_message = {"course_id": course_id, "user_id": args['user_id']}
                 conn.commit()
                 conn.close()
-                return {'StatusCode': '200', 'Message': 'Éxito en crea curso.'}
+
+                result = Notification().send_notification([x[0] for x in token_list], "Push_tdp",
+                                                          "Un alumno en el curso.",
+                                                          data_message)
+
+                if result == 'Ok':
+                    return {'StatusCode': '200', 'Message': 'Éxito en crear curso.'}
+                else:
+                    return {'StatusCode': '1000', 'Message': result}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
@@ -404,16 +419,14 @@ class CSCourseUser(Resource):
             data = cursor.fetchall()
 
             if len(data) is 0:
-                cursor.callproc('spObtainTokenIdPerCourse', [args['course_id']])
+                cursor.callproc('spObtainTokenId', [args['course_id'], None])  # 'Cause i want all the token_id.
                 token_list = cursor.fetchall()
                 data_message = {"course_id": args['course_id'], "user_id": args['user_id']}
                 conn.commit()
                 conn.close()
-                result_set = [str(x[0]) for x in token_list]
 
                 result = Notification().send_notification([x[0] for x in token_list], "Push_tdp", "Nuevo alumno en el curso.",
                                                           data_message)
-
                 if result == 'Ok':
                     return {'StatusCode': '200', 'Message': 'Usuario inscrito.'}
                 else:
