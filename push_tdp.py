@@ -54,10 +54,10 @@ class Home(Resource):
 
 class LoginUser(Resource):
     def post(self):
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('username', type=str)
             parser.add_argument('password', type=str)
@@ -72,16 +72,22 @@ class LoginUser(Resource):
                 cursor.callproc('spChangeToken', [data[0][0], args['token_id']])
                 data2 = cursor.fetchall()
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'user_id': str(data[0][0])}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 class CSUser(Resource):
     def post(self):
+        # my_data = JWT().verify_token()
+        # if my_data is not True:
+        #    return my_data
+
         conn = mysql.connect()
         cursor = conn.cursor()
 
@@ -103,23 +109,25 @@ class CSUser(Resource):
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
 
                 return {'StatusCode': '200', 'Message': 'Éxito en crear usuario.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spSelectUsers')
             data = cursor.fetchall()
 
@@ -138,12 +146,14 @@ class CSUser(Resource):
                     json_array.append(aux)
                 # my_json_array = json.dumps(json_array)
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': json_array}
             else:
                 return {'StatusCode': '1000', 'Message': 'Tabla vacía.'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 class UDUser(Resource):
@@ -152,10 +162,10 @@ class UDUser(Resource):
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('name', type=str)
             parser.add_argument('surname', type=str)
@@ -172,43 +182,47 @@ class UDUser(Resource):
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Usuario actualizado.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def delete(self, user_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spDeleteUser', [user_id])
             data = cursor.fetchall()
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Usuario eliminado.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self, user_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spSelectUser', [user_id])
             data = cursor.fetchall()
 
@@ -225,12 +239,14 @@ class UDUser(Resource):
                     json_object['token_id'] = my_user[6]
                     json_object['state'] = my_user[7]
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': json_object}
             else:
                 return {'StatusCode': '1000', 'Message': 'Usuario no encontrado.'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 class CSCourse(Resource):
@@ -239,10 +255,10 @@ class CSCourse(Resource):
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('user_id', type=int)
             parser.add_argument('name', type=str)
@@ -258,11 +274,10 @@ class CSCourse(Resource):
                 # 'Cause i want only the token_id who create de course.
                 cursor.execute("SELECT c.id FROM course c where c.name='" + args['name'] + "'")
                 course_id = cursor.fetchone()
-                cursor.callproc('spObtainTokenId', [None, args['user_id']])
+                cursor.callproc('spCreateCourseUser', [course_id, args['user_id'], 'ACT'])
                 token_list = cursor.fetchall()
                 data_message = {"course_id": course_id, "user_id": args['user_id']}
                 conn.commit()
-                conn.close()
 
                 result = Notification().send_notification([x[0] for x in token_list], "Push_tdp",
                                                           "Un alumno en el curso.",
@@ -276,16 +291,19 @@ class CSCourse(Resource):
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spSelectCourses')
             data = cursor.fetchall()
 
@@ -304,13 +322,14 @@ class CSCourse(Resource):
                     json_array.append(aux)
                     # my_json_array = json.dumps(json_array)
                 conn.commit()
-                conn.close()
-
                 return {'StatusCode': '200', 'Message': json_array}
             else:
                 return {'StatusCode': '1000', 'Message': 'Tabla vacía.'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 class UDCourse(Resource):
@@ -319,10 +338,10 @@ class UDCourse(Resource):
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('name', type=str)
             parser.add_argument('vacancies', type=int)
@@ -334,12 +353,14 @@ class UDCourse(Resource):
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Curso actualizado.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def delete(self, course_id):
 
@@ -347,31 +368,33 @@ class UDCourse(Resource):
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spDeleteCourse', [course_id])
             data = cursor.fetchall()
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Curso eliminado.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self, course_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spSelectCourse', [course_id])
             data = cursor.fetchall()
 
@@ -388,7 +411,6 @@ class UDCourse(Resource):
                     json_object['url'] = my_user[3]
                     json_object['state'] = my_user[4]
                 conn.commit()
-                conn.close()
                 if len(data2) > 0:
                     return {'StatusCode': '200', 'Message': json_object, 'Registered': data2[0][0]}
                 else:
@@ -397,6 +419,9 @@ class UDCourse(Resource):
                 return {'StatusCode': '1000', 'Message': 'Curso no encontrado.'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 class CSCourseUser(Resource):
@@ -405,10 +430,10 @@ class CSCourseUser(Resource):
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('course_id', type=int)
             parser.add_argument('user_id', type=int)
@@ -423,7 +448,6 @@ class CSCourseUser(Resource):
                 token_list = cursor.fetchall()
                 data_message = {"course_id": args['course_id'], "user_id": args['user_id']}
                 conn.commit()
-                conn.close()
 
                 result = Notification().send_notification([x[0] for x in token_list], "Push_tdp", "Nuevo alumno en el curso.",
                                                           data_message)
@@ -435,16 +459,19 @@ class CSCourseUser(Resource):
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spSelectCourseUsers')
             data = cursor.fetchall()
 
@@ -459,24 +486,61 @@ class CSCourseUser(Resource):
                     json_array.append(aux)
                     # my_json_array = json.dumps(json_array)
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': json_array}
             else:
                 return {'StatusCode': '1000', 'Message': 'Tabla vacía'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
-class UDRequestUser(Resource):
+class SubscribeClass(Resource):
+    def post(self):
+        # my_data = JWT().verify_token()
+        # if my_data is not True:
+        #    return my_data
+
+        conn = mysql.connect()
+        cursor = conn.cursor()
+
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('course_id', type=int)
+            args = parser.parse_args()
+
+            cursor.callproc('spObtainTokenId', [args['course_id'], None])  # 'Cause i want all the token_id.
+            token_list = cursor.fetchall()
+
+            if len(token_list) is not 0:
+                data_message = {"course_id": args['course_id']}
+                conn.commit()
+
+                result = Notification().send_notification([x[0] for x in token_list], "Push_tdp",
+                                                          "El curso se ha llenado.",
+                                                          data_message)
+                if result == 'Ok':
+                    return {'StatusCode': '200', 'Message': 'Curso lleno.'}
+                else:
+                    return {'StatusCode': '1000', 'Message': result}
+            else:
+                return {'StatusCode': '1000', 'Message': str(token_list[0])}
+        except Exception as e:
+            return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
+
     def put(self, request_user_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             parser = reqparse.RequestParser()
             parser.add_argument('course_id', type=int)
             parser.add_argument('user_id', type=int)
@@ -489,43 +553,47 @@ class UDRequestUser(Resource):
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Request_User updated.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def delete(self, request_user_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spDeleteCourseUser', [request_user_id])
             data = cursor.fetchall()
 
             if len(data) is 0:
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': 'Request_User deleted.'}
             else:
                 return {'StatusCode': '1000', 'Message': str(data[0][0])}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
     def get(self, course_id):
         # my_data = JWT().verify_token()
         # if my_data is not True:
         #    return my_data
 
-        try:
-            conn = mysql.connect()
-            cursor = conn.cursor()
+        conn = mysql.connect()
+        cursor = conn.cursor()
 
+        try:
             cursor.callproc('spObtainUsersPerCourse', [course_id])
             data = cursor.fetchall()
 
@@ -539,12 +607,14 @@ class UDRequestUser(Resource):
                     aux['username'] = my_course[3]
                     json_array.append(aux)
                 conn.commit()
-                conn.close()
                 return {'StatusCode': '200', 'Message': json_array}
             else:
                 return {'StatusCode': '1000', 'Message': 'Curso no encontrado.'}
         except Exception as e:
             return {'error': str(e)}
+        finally:
+            cursor.close()
+            conn.close()
 
 
 api.add_resource(Home, '/', '/home')
@@ -554,7 +624,7 @@ api.add_resource(UDUser, '/users/<user_id>')
 api.add_resource(CSCourse, '/courses', '/courses/')
 api.add_resource(UDCourse, '/courses/<course_id>')
 api.add_resource(CSCourseUser, '/requests_users', '/requests_users/')
-api.add_resource(UDRequestUser, '/requests_users/<course_id>')
+api.add_resource(SubscribeClass, '/subscribe/<course_id>', '/subscribe', '/subscribe/')
 
 if __name__ == '__main__':
     app.run(debug=True)
