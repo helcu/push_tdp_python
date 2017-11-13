@@ -10,7 +10,7 @@ import os
 import binascii
 
 app = Flask(__name__)
-#PORT = 5000
+PORT = 5000
 api = Api(app)
 mysql = MySQL()
 
@@ -472,23 +472,27 @@ class CSCourseUser(Resource):
         cursor = conn.cursor()
 
         try:
-            cursor.callproc('spSelectCourseUsers')
+            cursor.callproc('spSelectCoursesCompleted')
             data = cursor.fetchall()
 
             if len(data) > 0:
                 json_array = []
-                for my_user in data:
+                for course in data:
                     aux = collections.OrderedDict()
-                    aux['id'] = my_user[0]
-                    aux['request_id'] = my_user[1]
-                    aux['user_id'] = my_user[2]
-                    aux['state'] = my_user[3]
+                    aux['id'] = course[0]
+                    cursor.callproc('spCourseRegistered', [aux['id']])
+                    data2 = cursor.fetchall()
+                    aux['name'] = course[1]
+                    aux['vacancies'] = course[2]
+                    aux['url'] = course[3]
+                    aux['state'] = course[4]
+                    aux['registered'] = data2[0][0]
                     json_array.append(aux)
                     # my_json_array = json.dumps(json_array)
                 conn.commit()
                 return {'StatusCode': '200', 'Message': json_array}
             else:
-                return {'StatusCode': '1000', 'Message': 'Tabla vacía'}
+                return {'StatusCode': '1000', 'Message': 'Tabla vacía.'}
         except Exception as e:
             return {'error': str(e)}
         finally:
@@ -623,7 +627,7 @@ api.add_resource(CSUser, '/users', '/users/')
 api.add_resource(UDUser, '/users/<user_id>')
 api.add_resource(CSCourse, '/courses', '/courses/')
 api.add_resource(UDCourse, '/courses/<course_id>')
-api.add_resource(CSCourseUser, '/requests_users', '/requests_users/')
+api.add_resource(CSCourseUser, '/courses_users', '/courses_users/', '/courses_completed')
 api.add_resource(SubscribeClass, '/subscribe/<course_id>', '/subscribe', '/subscribe/')
 
 if __name__ == '__main__':
