@@ -444,7 +444,7 @@ class CSCourseUser(Resource):
             data = cursor.fetchall()
 
             if len(data) is 0:
-                cursor.callproc('spObtainTokenId', [args['course_id'], None])  # 'Cause i want all the token_id.
+                cursor.callproc('spObtainTokenId', [args['course_id'], args['user_id']])  # 'Cause i want all the token_id.
                 token_list = cursor.fetchall()
                 data_message = {"course_id": args['course_id'], "user_id": args['user_id']}
                 conn.commit()
